@@ -58,8 +58,8 @@
 #define AW_MAX_LEDS             216
 
 
-#define AW_WIDTH_RGB            6    // LMX2 configuration: 6 RGB columns
-#define AW_HEIGHT               12   // LMX2 configuration: 12 rows (SW)
+// #define AW_WIDTH_RGB            6    // LMX2 configuration: 6 RGB columns
+// #define AW_HEIGHT               12   // LMX2 configuration: 12 rows (SW)
 
 
 //* AW20216S Class Definition */
@@ -68,10 +68,12 @@ class AW20216S {
 public:
     /**
      * Constructor
+     * @param rows number of rows
+     * @param cols number of columns
      * @param csPin Arduino Chip Select Pin
      * @param spiPort SPI port to use (default SPI)
      */
-    AW20216S(uint8_t csPin, SPIClass &spiPort = SPI);
+    AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort = SPI);
 
     /**
      * Initialize the chip, configure SPI, and reset registers.
@@ -83,6 +85,19 @@ public:
      * Software reset (returns registers to default).
      */
     void reset();
+
+    /**
+     * Scan the entire matrix and turn off the LEDs
+     */
+    void clearScreen();
+
+    /**
+     * It scans the entire matrix and sets a fixed color.
+     * @param r red color component value
+     * @param g green color component value
+     * @param b blue color component value
+     */
+    void fillScreen(uint8_t r, uint8_t g, uint8_t b);
 
     /**
      * Configure the global current (Master Brightness).
@@ -119,6 +134,8 @@ private:
     uint8_t _csPin;
     SPIClass *_spiPort;
     uint8_t _currentPage; // To optimize and avoid sending page commands if we are already there
+    uint8_t _rows; // number of rows
+    uint8_t _cols; // number of columns
 
     /**
      * Change the internal page of the chip if necessary.

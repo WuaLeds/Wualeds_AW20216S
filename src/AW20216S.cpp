@@ -5,8 +5,10 @@
 #define AW_RESET_DELAY    2        // 2ms delay after reset [cite: 524]
 
 //******************************************************** */
-AW20216S::AW20216S(uint8_t csPin, SPIClass &spiPort) {
+AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort) {
     _csPin = csPin;
+    _rows = rows;
+    _cols = cols;
     _spiPort = &spiPort;
     _currentPage = 0xFF; // Invalid value to force update
 }
@@ -21,7 +23,7 @@ bool AW20216S::begin() {
 
     // 1. Reset the chip via software to ensure a clean state [cite: 522]
     writeRegister(AW20216S_PAGE0, AW_REG_RSTN, AW_RST_CMD);
-    delay(AW_RESET_DELAY); // Esperar tiempo de carga OTP [cite: 507]
+    delay(AW_RESET_DELAY); // Wait for OTP loading time [cite: 507]
 
     // 2. Chip Enable [cite: 530]
     // GCR register (0x00), Bit 0 (CHIPEN) = 1
@@ -45,6 +47,28 @@ void AW20216S::reset() {
 
 //******************************************************** */
 
+void AW20216S::clearScreen() {
+  // Scan the entire matrix and turn off the LEDs
+  for (int y = 0; y < _rows; y++) {
+    for (int x = 0; x < _cols; x++) {
+      setPixel(x, y, 0, 0, 0);
+    }
+  }
+}
+
+//******************************************************** */
+
+void AW20216S::fillScreen(uint8_t r, uint8_t g, uint8_t b) {
+  // It scans the entire matrix and sets a fixed color.
+  for (int y = 0; y < _rows; y++) {
+    for (int x = 0; x < _cols; x++) {
+      setPixel(x, y, r, g, b);
+    }
+  }
+}
+
+//******************************************************** */
+
 void AW20216S::setGlobalCurrent(uint8_t current) {
     // Configure the overall current for all LEDs [cite: 31]
     writeRegister(AW20216S_PAGE0, AW_REG_GCCR, current);
@@ -53,7 +77,7 @@ void AW20216S::setGlobalCurrent(uint8_t current) {
 //******************************************************** */
 
 void AW20216S::setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b) {
-    if (x >= AW_WIDTH_RGB || y >= AW_HEIGHT) return;
+    if (x >= _cols || y >= _rows) return;
 
     uint8_t rIdx, gIdx, bIdx;
     _getLedIndices(x, y, rIdx, gIdx, bIdx);
@@ -76,8 +100,8 @@ void AW20216S::setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale) {
     // This is useful for overall white balance.
     // We go through all the LEDs.
     
-    for (uint8_t y = 0; y < AW_HEIGHT; y++) {
-        for (uint8_t x = 0; x < AW_WIDTH_RGB; x++) {
+    for (uint8_t y = 0; y < _rows; y++) {
+        for (uint8_t x = 0; x < _cols; x++) {
             uint8_t rIdx, gIdx, bIdx;
             _getLedIndices(x, y, rIdx, gIdx, bIdx);
             
