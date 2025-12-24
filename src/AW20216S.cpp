@@ -86,11 +86,42 @@ void AW20216S::setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b) {
     // We could use PAGE 4 to write PWM+Scaling together, 
     // But for standard setPixel we use Page 1.
     
+    //* Old mode: Direct write to registers
     // Note: Writing byte by byte is inefficient if the entire screen is being updated.
     // But for individual setPixel it is correct.
-    writeRegister(AW20216S_PAGE1, rIdx, r);
-    writeRegister(AW20216S_PAGE1, gIdx, g);
-    writeRegister(AW20216S_PAGE1, bIdx, b);
+    // writeRegister(AW20216S_PAGE1, rIdx, r);
+    // writeRegister(AW20216S_PAGE1, gIdx, g);
+    // writeRegister(AW20216S_PAGE1, bIdx, b);
+
+    //* New mode: Update local framebuffer
+    _frameBuffer[rIdx] = r;
+    _frameBuffer[gIdx] = g;
+    _frameBuffer[bIdx] = b;
+}
+
+//******************************************************** */
+
+void AW20216S::show() {    
+    // 1. SPI Config
+    _spiPort->beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
+    digitalWrite(_csPin, LOW);
+
+    // 2. Send write header for PAGE 1 (PWM)
+    // ID(0xA0) | PAGE1(0x02) | Write(0x00) = 0xA2
+    uint8_t commandByte = 0xA2; 
+    
+    _spiPort->transfer(commandByte); 
+    _spiPort->transfer(0x00); // Initial Direction (First LED)
+
+    // 3. BURST MODE: Send all 216 bytes at once
+    // The chip automatically increments its internal address with each byte received
+    for (int i = 0; i < 216; i++) {
+        _spiPort->transfer(_frameBuffer[i]);
+    }
+
+    // 4. End transaction
+    digitalWrite(_csPin, HIGH);
+    _spiPort->endTransaction();
 }
 
 //******************************************************** */

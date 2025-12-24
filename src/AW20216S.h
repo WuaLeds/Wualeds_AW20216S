@@ -117,6 +117,11 @@ public:
     void setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b);
 
     /**
+     * Send the entire buffer (_frameBuffer) to the chip at once.
+     */
+    void show();
+
+    /**
      * Configure the mixing stream (Scaling) for white balance.
      * @param r_scale Scale for Red channel (0-255)
      * @param g_scale Scale for Green channel (0-255)
@@ -136,6 +141,9 @@ private:
     uint8_t _currentPage; // To optimize and avoid sending page commands if we are already there
     uint8_t _rows; // number of rows
     uint8_t _cols; // number of columns
+
+    // Local buffer: 12 rows * 18 columns (6 red, 6 green, 6 blue)(CS) = 216 bytes.
+    uint8_t _frameBuffer[216];
 
     /**
      * Change the internal page of the chip if necessary.
