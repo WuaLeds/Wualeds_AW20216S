@@ -15,7 +15,7 @@
 
 // Instantiate the object.
 // If you are using a microcontroller with multiple SPIs, you can pass &SPI1, etc.
-AW20216S ledMatrix(CS_PIN);
+AW20216S ledMatrix(HEIGHT_LED_MATIX, WIDTH_LED_MATRIX, CS_PIN);
 
 
 //*********************************************************** */
@@ -43,7 +43,7 @@ void setup() {
   ledMatrix.setScaling(0xFF, 0xFF, 0xFF);
   
   // Clean the screen at the beginning (everything is turned off)
-  clearScreen();
+  ledMatrix.clearScreen();
 }
 
 //*********************************************************** */
@@ -72,32 +72,12 @@ void loop() {
   Serial.println("Demo: Blue Flash");
   
   // Fill everything in blue
-  fillScreen(0, 0, 255);
+  ledMatrix.fillScreen(0, 0, 255);
   delay(500);
   
   // Turn off everything
-  clearScreen();
+  ledMatrix.clearScreen();
   delay(500);
 }
 
 //*********************************************************** */
-
-//* --- Auxiliary functions for the example ---
-
-void clearScreen() {
-  // Scan the entire matrix and turn off the LEDs
-  for (int y = 0; y < HEIGHT_LED_MATIX; y++) {
-    for (int x = 0; x < WIDTH_LED_MATRIX; x++) {
-      ledMatrix.setPixel(x, y, 0, 0, 0);
-    }
-  }
-}
-
-void fillScreen(uint8_t r, uint8_t g, uint8_t b) {
-  // It scans the entire matrix and sets a fixed color.
-  for (int y = 0; y < HEIGHT_LED_MATIX; y++) {
-    for (int x = 0; x < WIDTH_LED_MATRIX; x++) {
-      ledMatrix.setPixel(x, y, r, g, b);
-    }
-  }
-}

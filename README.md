@@ -1,4 +1,4 @@
-# AW20216S-firmware
+# AW20216S Library
 
 ## How does the chip work? (Key Concepts)
     * LED Activation (Scanning): The chip doesn't turn on all the LEDs at once. It uses a technique called Time Division Multiplexing (TDM).
@@ -42,3 +42,6 @@ In the SPI protocol: Unlike other chips where you have to send a "Change to Page
     * Bits D3, D2, and D1 of the first byte indicate the page (000 = Page 0, 001 = Page 1, etc.).
 
     * This means you can write to a configuration register (Page 0) and, a millisecond later, to a brightness register (Page 1) without any additional intermediate commands.
+
+
+# Wualeds | 12/2025
