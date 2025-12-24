@@ -60,11 +60,13 @@ void loop() {
       // Turn current pixel red
       // setPixel(x, y, R, G, B)
       ledMatrix.setPixel(x, y, 255, 0, 0); 
+      ledMatrix.show(); // Update the chip with the new framebuffer
       
       delay(50); // Movement speed
       
       // Turn off current pixel before moving to the next one
       ledMatrix.setPixel(x, y, 0, 0, 0);
+      ledMatrix.show(); // Update the chip with the new framebuffer
     }
   }
 
@@ -73,10 +75,12 @@ void loop() {
   
   // Fill everything in blue
   ledMatrix.fillScreen(0, 0, 255);
+  ledMatrix.show(); // Update the chip with the new framebuffer
   delay(500);
   
   // Turn off everything
   ledMatrix.clearScreen();
+  ledMatrix.show(); // Update the chip with the new framebuffer
   delay(500);
 }
 
