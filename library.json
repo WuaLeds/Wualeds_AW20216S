@@ -1,0 +1,20 @@
+{
+  "name": "WuaLeds_AW20216S",
+  "version": "0.1.1",
+  "description": "SPI driver library for the AW20216S RGB LED controller.",
+  "keywords": ["aw20216s", "led", "rgb", "spi", "driver"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WuaLeds/Wualeds_AW20216S.git"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Matias Cazanave",
+      "url": "https://matiascazanave.my.canva.site/"
+    }
+  ],
+  "frameworks": ["arduino"],
+  "platforms": "*",
+  "headers": ["AW20216S.h"]
+}
