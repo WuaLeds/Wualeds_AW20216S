@@ -1,8 +1,14 @@
 #include "AW20216S.h"
 
 // Definitions of times (Datasheet Page 7 & 9)
-#define AW_SPI_SPEED      10000000 // 10MHz Max SPI Speed [cite: 455]
 #define AW_RESET_DELAY    2        // 2ms delay after reset [cite: 524]
+
+// AVR (Uno/Leonardo): max SPI clock is typically F_CPU/2 => 8 MHz @ 16 MHz
+#if defined(ARDUINO_ARCH_AVR)
+  #define AW_SPI_SPEED 8000000UL
+#else
+  #define AW_SPI_SPEED 10000000 // 10MHz Max SPI Speed [cite: 455]
+#endif
 
 //******************************************************** */
 AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort) {
@@ -101,7 +107,7 @@ void AW20216S::setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b) {
 
 void AW20216S::show() {    
     // 1. SPI Config
-    _spiPort->beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
+    _spiPort->beginTransaction(SPISettings(AW_SPI_SPEED, MSBFIRST, SPI_MODE0));
     digitalWrite(_csPin, LOW);
 
     // 2. Send write header for PAGE 1 (PWM)
