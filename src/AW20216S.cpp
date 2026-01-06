@@ -18,13 +18,11 @@ AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort)
 bool AW20216S::begin() {
     pinMode(_csPin, OUTPUT);
     digitalWrite(_csPin, HIGH);
-
+    delay(20); // Small delay to ensure proper startup
     _spiPort->begin();
 
     // 1. Reset the chip via software to ensure a clean state [cite: 522]
-    writeRegister(AW20216S_PAGE0, AW_REG_RSTN, AW_RST_CMD);
-    delay(AW_RESET_DELAY); // Wait for OTP loading time [cite: 507]
-
+    this->reset();
     // 2. Chip Enable [cite: 530]
     // GCR register (0x00), Bit 0 (CHIPEN) = 1
     // Bit 4-7 (SWSEL) The default is 1011 (12 active rows), so we'll leave it like that.
@@ -42,7 +40,7 @@ bool AW20216S::begin() {
 
 void AW20216S::reset() {
     writeRegister(AW20216S_PAGE0, AW_REG_RSTN, AW_RST_CMD);
-    delay(AW_RESET_DELAY);
+    delay(AW_RESET_DELAY); // Wait for OTP loading time [cite: 507]
 }
 
 //******************************************************** */
