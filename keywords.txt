@@ -7,8 +7,10 @@
 #######################################
 
 AW20216S            KEYWORD1
+AwChannel           KEYWORD1
 AwPwmFreq           KEYWORD1
 AwPwmPhase          KEYWORD1
+AwPattern           KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
@@ -22,14 +24,27 @@ setGlobalCurrent    KEYWORD2
 setPixel            KEYWORD2
 show                KEYWORD2
 setScaling          KEYWORD2
+
 setPwmClock         KEYWORD2
 setPwmFrequency     KEYWORD2
+
+configureBreathing      KEYWORD2
+setChannelPattern       KEYWORD2
+setPixelPatternRGB      KEYWORD2
+setBreathingBrightness  KEYWORD2
+enableBreathing         KEYWORD2
+startBreathing          KEYWORD2
+
 writeRegister       KEYWORD2
 readRegister        KEYWORD2
 
 #######################################
-# Constants and Enums (LITERAL1)
+# Constants and Enum Values (LITERAL1)
 #######################################
+
+R                   LITERAL1
+G                   LITERAL1
+B                   LITERAL1
 
 High                LITERAL1
 Low                 LITERAL1
@@ -47,6 +62,11 @@ PhaseDelay          LITERAL1
 PhaseInvert         LITERAL1
 ThreePhase2         LITERAL1
 ThreePhase3         LITERAL1
+
+PWM                 LITERAL1
+PAT0                LITERAL1
+PAT1                LITERAL1
+PAT2                LITERAL1
 
 AW_MAX_LEDS         LITERAL1
 AW_GLOBAL_ENABLE    LITERAL1
