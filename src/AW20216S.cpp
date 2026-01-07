@@ -143,6 +143,102 @@ void AW20216S::setPwmFrequency(AwPwmFreq freq, AwPwmPhase phase)
 
     setPwmClock(pccr);
 }
+
+//******************************************************** */
+
+void AW20216S::setChannelPattern(uint8_t x, uint8_t y, AwChannel ch, AwPattern pat)
+{
+    if (x >= _cols || y >= _rows)
+        return;
+
+    const uint8_t base = AW_BASE_INDEX(x, y);          // channel base (R)
+    const uint8_t led = (uint8_t)(base + (uint8_t)ch); // 0..215 (R/G/B channel)
+
+    const uint8_t reg = (uint8_t)(AW_REG_PATG_BASE + (led / 3u));
+    const uint8_t shift = (uint8_t)((led % 3u) * 2u);
+
+    const uint8_t pat2 = ((uint8_t)pat) & 0x03u;
+
+    uint8_t v = readRegister(AW20216S_PAGE3, reg);
+    v &= (uint8_t)~(0x03u << shift);
+    v |= (uint8_t)(pat2 << shift);
+    writeRegister(AW20216S_PAGE3, reg, v);
+}
+
+void AW20216S::setPixelPatternRGB(uint8_t x, uint8_t y, AwPattern rPat, AwPattern gPat, AwPattern bPat)
+{
+    setChannelPattern(x, y, AwChannel::R, rPat);
+    setChannelPattern(x, y, AwChannel::G, gPat);
+    setChannelPattern(x, y, AwChannel::B, bPat);
+}
+
+void AW20216S::configureBreathing(
+    AwPattern pat,
+    uint8_t t0,
+    uint8_t t1,
+    uint8_t t2,
+    uint8_t t3,
+    bool logarithmic)
+{
+    if (pat == AwPattern::PWM)
+        return;
+
+    const uint8_t idx = AW_PAT_INDEX(pat);
+    const uint8_t tBase = AW_PAT_T_BASE(idx);
+    const uint8_t cfgAddr = AW_PAT_CFG_ADDR(idx);
+
+    // T0–T3
+    writeRegister(AW20216S_PAGE0, tBase + 0, t0);
+    writeRegister(AW20216S_PAGE0, tBase + 1, t1);
+    writeRegister(AW20216S_PAGE0, tBase + 2, t2);
+    writeRegister(AW20216S_PAGE0, tBase + 3, t3);
+
+    // Read-modify-write PATxCFG
+    uint8_t cfg = readRegister(AW20216S_PAGE0, cfgAddr);
+
+    // Clear controllable bits
+    cfg &= ~(AW_PATCFG_PATEN |
+             AW_PATCFG_LOGEN |
+             AW_PATCFG_PATMD);
+
+    // Enable breathing, autonomous mode
+    cfg |= AW_PATCFG_PATEN | AW_PATCFG_PATMD;
+
+    if (logarithmic)
+    {
+        cfg |= AW_PATCFG_LOGEN;
+    }
+
+    writeRegister(AW20216S_PAGE0, cfgAddr, cfg);
+}
+
+void AW20216S::setBreathingBrightness(AwPattern pat, uint8_t minV, uint8_t maxV)
+{
+    if (pat == AwPattern::PWM)
+        return;
+    const uint8_t idx = AW_PAT_INDEX(pat); // PAT0->0, PAT1->1, PAT2->2
+
+    writeRegister(AW20216S_PAGE0, (uint8_t)(AW_REG_PWMH0 + idx), maxV);
+    writeRegister(AW20216S_PAGE0, (uint8_t)(AW_REG_PWML0 + idx), minV);
+}
+
+void AW20216S::enableBreathing(AwPattern pat, bool enable)
+{
+    uint8_t addr = AW_REG_PAT0CFG + (uint8_t)pat;
+    uint8_t cfg = enable ? 0x01 : 0x00;
+
+    writeRegister(AW20216S_PAGE0, addr, cfg);
+}
+
+void AW20216S::startBreathing(AwPattern pat)
+{
+    if (pat == AwPattern::PWM)
+        return;
+
+    const uint8_t idx = AW_PAT_INDEX(pat);
+    writeRegister(AW20216S_PAGE0, AW_REG_PATGO, (uint8_t)(1u << idx));
+}
+
 //******************************************************** */
 
 void AW20216S::writeRegister(uint8_t page, uint8_t reg, uint8_t value)

@@ -7,7 +7,7 @@
 
 // Chip Select (CS) pin definition
 // On Arduino UNO it is usually 10. On ESP32 it can be 5 or 15.
-#define CS_PIN 10 
+#define CS_PIN 10
 
 // Row and Column definitions for the 6x12 RGB matrix
 #define WIDTH_LED_MATRIX 6
@@ -17,21 +17,23 @@
 // If you are using a microcontroller with multiple SPIs, you can pass &SPI1, etc.
 AW20216S ledMatrix(HEIGHT_LED_MATIX, WIDTH_LED_MATRIX, CS_PIN);
 
-
 //*********************************************************** */
 //***********        Setup Function                           */
 //*********************************************************** */
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
   Serial.println("Starting AW20216S...");
 
   // 1. Initialize the chip
-  if (!ledMatrix.begin()) {
+  if (!ledMatrix.begin())
+  {
     Serial.println("Error: AW20216S chip not detected.");
-    while (1); // Stop execution if it fails
+    while (1)
+      ; // Stop execution if it fails
   }
-  
+
   Serial.println("Chip started correctly.");
 
   // 2. Configure global current (Master brightness)
@@ -41,28 +43,31 @@ void setup() {
   // 3. Set Scaling (White Balance) to maximum
   // This ensures that when you set PWM to maximum, the LED will shine at full brightness.
   ledMatrix.setScaling(0xFF, 0xFF, 0xFF);
-  
-  //ledMatrix.setPwmFrequency(AwPwmFreq::High); // Set PWM frequency to 62.5 kHz to avoid flicker (internal default is already High)
+
+  // ledMatrix.setPwmFrequency(AwPwmFreq::High); // Set PWM frequency to 62.5 kHz to avoid flicker (internal default is already High)
 }
 
 //*********************************************************** */
 //***********        Main Loop Function                       */
 //*********************************************************** */
 
-void loop() {
+void loop()
+{
   // --- DEMO 1: Pixel Red Runner ---
   Serial.println("Demo: Red Pixel traveling...");
-  
-  for (int y = 0; y < HEIGHT_LED_MATIX; y++) {       // 12 Rows
-    for (int x = 0; x < WIDTH_LED_MATRIX; x++) {      // 6 Colums
-      
+
+  for (int y = 0; y < HEIGHT_LED_MATIX; y++)
+  { // 12 Rows
+    for (int x = 0; x < WIDTH_LED_MATRIX; x++)
+    { // 6 Colums
+
       // Turn current pixel red
       // setPixel(x, y, R, G, B)
-      ledMatrix.setPixel(x, y, 255, 0, 0); 
+      ledMatrix.setPixel(x, y, 255, 0, 0);
       ledMatrix.show(); // Update the chip with the new framebuffer
-      
+
       delay(50); // Movement speed
-      
+
       // Turn off current pixel before moving to the next one
       ledMatrix.setPixel(x, y, 0, 0, 0);
       ledMatrix.show(); // Update the chip with the new framebuffer
@@ -71,12 +76,12 @@ void loop() {
 
   // --- DEMO 2: Blue Flicker ---
   Serial.println("Demo: Blue Flash");
-  
+
   // Fill everything in blue
   ledMatrix.fillScreen(0, 0, 255);
   ledMatrix.show(); // Update the chip with the new framebuffer
   delay(500);
-  
+
   // Turn off everything
   ledMatrix.clearScreen();
   ledMatrix.show(); // Update the chip with the new framebuffer

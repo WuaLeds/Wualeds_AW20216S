@@ -58,6 +58,13 @@
 #define AW_GLOBAL_ENABLE        0x01 // Bit CHIPEN in GCR [cite: 700]
 #define AW_MAX_LEDS             216
 
+// --- General Enumerations ---
+enum class AwChannel : uint8_t {
+    R = 0,
+    G = 1,
+    B = 2
+};
+
 // --- PAGE 0: Enumerations ---
 
 // PWM Frequency Options (PCCR Register) [page: 27]
@@ -83,6 +90,16 @@ enum class AwPwmPhase : uint8_t {
     ThreePhase3 = 0b11
 };
 
+// --- PAGE 3: Breathing enums ---
+
+// --- Breathing Pattern ---
+enum class AwPattern : uint8_t {
+    PWM  = 0b00, // No breathing, direct PWM control
+    PAT0 = 0b01,
+    PAT1 = 0b10,
+    PAT2 = 0b11
+};
+
 //******************************************************** */
 
 // Supported cores with SPI bulk transfer
@@ -106,6 +123,19 @@ enum class AwPwmPhase : uint8_t {
 #define AW_CMD_WRITE_PAGE(page) (uint8_t)(AW_CHIPID_SPI | ((page & 0x07) << 1) | 0x00)
 #define AW_CMD_READ_PAGE(page) (uint8_t)(AW_CHIPID_SPI | ((page & 0x07) << 1) | 0x01)
 
+// --- PATxCFG bits ---
+#define AW_PATCFG_PATEN   (1u << 0)
+#define AW_PATCFG_PATMD   (1u << 1)
+#define AW_PATCFG_RAMPE   (1u << 2)
+#define AW_PATCFG_SWITH   (1u << 3)
+#define AW_PATCFG_LOGEN   (1u << 4)
+#define AW_PATCFG_PATFLG  (1u << 5)
+
+// PATx register helpers
+#define AW_PAT_INDEX(pat) ((uint8_t)(pat) - 1u)  // PAT0->0, PAT1->1, PAT2->2
+#define AW_PAT_T_BASE(idx) (uint8_t)( (uint8_t)AW_REG_PAT0T0 + ((uint8_t)(idx) * 4u))
+#define AW_PAT_CFG_ADDR(idx) (uint8_t)( (uint8_t)AW_REG_PAT0CFG + (uint8_t)(idx))
+
 //* AW20216S Class Definition */
 
 class AW20216S
@@ -115,7 +145,7 @@ public:
      * Constructor
      * @param rows number of rows
      * @param cols number of columns
-     * @param csPin Arduino Chip Select Pin
+     * @param csPin Chip Select Pin
      * @param spiPort SPI port to use (default SPI)
      */
     AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort = SPI);
@@ -174,6 +204,8 @@ public:
      */
     void setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale);
 
+    /** PWM support */
+
     /**
      * Configure the PWM clock by setting the PCCR register.
      * @param pccr Value to set in the PCCR register.
@@ -186,6 +218,67 @@ public:
      * @param phase PWM Phase setting (default: PhaseDelay)
      */
     void setPwmFrequency(AwPwmFreq freq, AwPwmPhase phase = AwPwmPhase::PhaseDelay);
+
+    /** Breathing support */
+
+    /**
+     * Configure basic breathing timing (T0–T3)
+     * @param pat Pattern to configure (PAT0, PAT1, PAT2)
+     * @param t0 Time for Phase 0 (Rise Time)
+     * @param t1 Time for Phase 1 (On Time)
+     * @param t2 Time for Phase 2 (Fall Time)
+     * @param t3 Time for Phase 3 (Off Time)
+     * @param logarithmic true for logarithmic timing, false for linear (default: false)
+     */
+    void configureBreathing(
+        AwPattern pat,
+        uint8_t t0,
+        uint8_t t1,
+        uint8_t t2,
+        uint8_t t3,
+        bool logarithmic = false);
+
+    /** 
+     * Set breathing pattern for a specific channel of a pixel
+     * @param x Column (0-5 for 6x12 RGB matrix)
+     * @param y Row (0-11)
+     * @param ch Channel to assign (R, G, B)
+     * @param pat Pattern to assign (PAT0, PAT1, PAT2)
+     */
+    void setChannelPattern(uint8_t x, uint8_t y, AwChannel ch, AwPattern pat);
+
+    /**
+     * Set breathing patterns for R, G, and B channels of a pixel
+     * @param x Column (0-5 for 6x12 RGB matrix)
+     * @param y Row (0-11)
+     * @param rPat Pattern for Red channel (PAT0, PAT1, PAT2)
+     * @param gPat Pattern for Green channel (PAT0, PAT1, PAT2)
+     * @param bPat Pattern for Blue channel (PAT0, PAT1, PAT2
+     */
+    void setPixelPatternRGB(uint8_t x, uint8_t y, AwPattern rPat, AwPattern gPat, AwPattern bPat);
+
+    /**
+     * Set the minimum and maximum brightness for a breathing pattern
+     * @param pat Pattern to configure (PAT0, PAT1, PAT2)
+     * @param minV Minimum brightness (0-255)
+     * @param maxV Maximum brightness (0-255)
+     */
+    void setBreathingBrightness(AwPattern pat, uint8_t minV, uint8_t maxV);
+
+    /**
+     * Enable or disable breathing for a specific pattern
+     * @param pat Pattern to configure (PAT0, PAT1, PAT2)
+     * @param enable true to enable, false to disable
+     */
+    void enableBreathing(AwPattern pat, bool enable);
+
+    /**
+     * Start the breathing effect for a specific pattern
+     * @param pat Pattern to start (PAT0, PAT1, PAT2)
+     */
+    void startBreathing(AwPattern pat);
+
+    /** Extra advanced functions */
 
     /**
      * Advanced function to directly write a RAW record.
