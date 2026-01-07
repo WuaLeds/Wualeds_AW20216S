@@ -167,6 +167,10 @@ private:
 #endif
 
     void _writePageBurst(uint8_t page, const uint8_t *data, uint16_t len);
+    inline void _clearFrameBuffer()
+    {
+        memset(_frameBuffer, 0, AW_MAX_LEDS);
+    }
 };
 
 #endif

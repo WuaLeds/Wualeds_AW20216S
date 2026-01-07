@@ -12,7 +12,7 @@ AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort)
     _cols = cols;
     _spiPort = &spiPort;
     _currentPage = 0xFF; // Invalid value to force update
-    memset(_frameBuffer, 0, sizeof(_frameBuffer));
+     _clearFrameBuffer();
 }
 
 //******************************************************** */
@@ -51,7 +51,7 @@ void AW20216S::reset()
 
 void AW20216S::clearScreen()
 {
-    memset(_frameBuffer, 0, AW_MAX_LEDS);
+     _clearFrameBuffer();
 }
 
 //******************************************************** */
