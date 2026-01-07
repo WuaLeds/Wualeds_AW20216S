@@ -1,0 +1,53 @@
+#######################################
+# Syntax Coloring Map For AW20216S
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+AW20216S            KEYWORD1
+AwPwmFreq           KEYWORD1
+AwPwmPhase          KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin               KEYWORD2
+reset               KEYWORD2
+clearScreen         KEYWORD2
+fillScreen          KEYWORD2
+setGlobalCurrent    KEYWORD2
+setPixel            KEYWORD2
+show                KEYWORD2
+setScaling          KEYWORD2
+setPwmClock         KEYWORD2
+setPwmFrequency     KEYWORD2
+writeRegister       KEYWORD2
+readRegister        KEYWORD2
+
+#######################################
+# Constants and Enums (LITERAL1)
+#######################################
+
+High                LITERAL1
+Low                 LITERAL1
+
+Hz62500             LITERAL1
+Hz32250             LITERAL1
+Hz15600             LITERAL1
+Hz7800              LITERAL1
+Hz3900              LITERAL1
+Hz1950              LITERAL1
+Hz977               LITERAL1
+Hz488               LITERAL1
+
+PhaseDelay          LITERAL1
+PhaseInvert         LITERAL1
+ThreePhase2         LITERAL1
+ThreePhase3         LITERAL1
+
+AW_MAX_LEDS         LITERAL1
+AW_GLOBAL_ENABLE    LITERAL1
+AW_RST_CMD          LITERAL1

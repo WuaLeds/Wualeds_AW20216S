@@ -1,5 +1,4 @@
 #include "AW20216S.h"
-#include <string.h>
 
 // Definitions of times (Datasheet Page 7 & 9)
 #define AW_RESET_DELAY 2 // 2ms delay after reset [cite: 524]
@@ -12,7 +11,7 @@ AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort)
     _cols = cols;
     _spiPort = &spiPort;
     _currentPage = 0xFF; // Invalid value to force update
-     _clearFrameBuffer();
+    _clearFrameBuffer();
 }
 
 //******************************************************** */
@@ -51,7 +50,7 @@ void AW20216S::reset()
 
 void AW20216S::clearScreen()
 {
-     _clearFrameBuffer();
+    _clearFrameBuffer();
 }
 
 //******************************************************** */
@@ -82,7 +81,7 @@ void AW20216S::setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b)
         return;
 
     // Physical layout: 18 channels per row, RGB packed
-    uint8_t *p = &_frameBuffer[AW_BASE_INDEX(x, y) ];
+    uint8_t *p = &_frameBuffer[AW_BASE_INDEX(x, y)];
 
     *p++ = r;
     *p++ = g;
@@ -127,6 +126,23 @@ void AW20216S::setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale)
     _spiPort->endTransaction();
 }
 
+//******************************************************** */
+
+void AW20216S::setPwmClock(uint8_t pccr)
+{
+    // Keep reserved bits [4:2] at 0
+    pccr &= 0b11100011;
+    writeRegister(AW20216S_PAGE0, AW_REG_PCCR, pccr);
+}
+
+void AW20216S::setPwmFrequency(AwPwmFreq freq, AwPwmPhase phase)
+{
+    const uint8_t pccr =
+        (uint8_t)(((uint8_t)freq & 0x07) << 5) |
+        (uint8_t)((uint8_t)phase & 0x03);
+
+    setPwmClock(pccr);
+}
 //******************************************************** */
 
 void AW20216S::writeRegister(uint8_t page, uint8_t reg, uint8_t value)
