@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include <string.h>
 
 /**
  * Registers definitions del AW20216S
@@ -57,6 +58,33 @@
 #define AW_GLOBAL_ENABLE        0x01 // Bit CHIPEN in GCR [cite: 700]
 #define AW_MAX_LEDS             216
 
+// --- PAGE 0: Enumerations ---
+
+// PWM Frequency Options (PCCR Register) [page: 27]
+enum class AwPwmFreq : uint8_t {
+    High   = 0b000, // 62.5 kHz (max PWM freq)
+    Hz62500 = 0b000,
+
+    Hz32250 = 0b001,
+    Hz15600 = 0b010,
+    Hz7800  = 0b011,
+    Hz3900  = 0b100,
+    Hz1950  = 0b101,
+    Hz977   = 0b110,
+
+    Low    = 0b111, // 488 Hz (min PWM freq)
+    Hz488  = 0b111
+};
+
+enum class AwPwmPhase : uint8_t {
+    PhaseDelay  = 0b00,
+    PhaseInvert = 0b01,
+    ThreePhase2 = 0b10,
+    ThreePhase3 = 0b11
+};
+
+//******************************************************** */
+
 // Supported cores with SPI bulk transfer
 #if defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_ESP32)
 #define AW_HAS_SPI_BULK_TRANSFER 1
@@ -104,12 +132,12 @@ public:
     void reset();
 
     /**
-     * Scan the entire matrix and turn off the LEDs
+     * Clears the internal framebuffer (all pixels to 0).
      */
     void clearScreen();
 
     /**
-     * It scans the entire matrix and sets a fixed color.
+     * Fill the entire screen framebuffer with a specific color.
      * @param r red color component value
      * @param g green color component value
      * @param b blue color component value
@@ -129,7 +157,7 @@ public:
      * @param r Red Value (0-255)
      * @param g Green Value (0-255)
      * @param b Blue Value (0-255)
-     * Note: Writes directly to the chip's PWM register.
+     * Note: Writes to internal frame buffer.
      */
     void setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b);
 
@@ -147,9 +175,25 @@ public:
     void setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale);
 
     /**
+     * Configure the PWM clock by setting the PCCR register.
+     * @param pccr Value to set in the PCCR register.
+     */
+    void setPwmClock(uint8_t pccr);
+
+    /**
+     * Configure the PWM frequency and phase.
+     * @param freq PWM Frequency setting
+     * @param phase PWM Phase setting (default: PhaseDelay)
+     */
+    void setPwmFrequency(AwPwmFreq freq, AwPwmPhase phase = AwPwmPhase::PhaseDelay);
+
+    /**
      * Advanced function to directly write a RAW record.
      */
     void writeRegister(uint8_t page, uint8_t reg, uint8_t value);
+    /**
+     * Advanced function to directly read a RAW record.
+     */
     uint8_t readRegister(uint8_t page, uint8_t reg);
 
 private:
@@ -173,4 +217,4 @@ private:
     }
 };
 
-#endif
+#endif // AW20216S_H

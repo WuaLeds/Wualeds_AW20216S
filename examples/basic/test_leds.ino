@@ -42,8 +42,7 @@ void setup() {
   // This ensures that when you set PWM to maximum, the LED will shine at full brightness.
   ledMatrix.setScaling(0xFF, 0xFF, 0xFF);
   
-  // Clean the screen at the beginning (everything is turned off)
-  ledMatrix.clearScreen();
+  //ledMatrix.setPwmFrequency(AwPwmFreq::High); // Set PWM frequency to 62.5 kHz to avoid flicker (internal default is already High)
 }
 
 //*********************************************************** */
