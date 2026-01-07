@@ -57,14 +57,31 @@
 #define AW_GLOBAL_ENABLE        0x01 // Bit CHIPEN in GCR [cite: 700]
 #define AW_MAX_LEDS             216
 
+// Supported cores with SPI bulk transfer
+#if defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_ESP32)
+#define AW_HAS_SPI_BULK_TRANSFER 1
+#else
+#define AW_HAS_SPI_BULK_TRANSFER 0
+#endif
 
-// #define AW_WIDTH_RGB            6    // LMX2 configuration: 6 RGB columns
-// #define AW_HEIGHT               12   // LMX2 configuration: 12 rows (SW)
+// AVR (Uno/Leonardo): max SPI clock is typically F_CPU/2 => 8 MHz @ 16 MHz
+#if defined(ARDUINO_ARCH_AVR)
+#define AW_SPI_SPEED 8000000UL
+#else
+#define AW_SPI_SPEED 10000000UL // 10MHz Max SPI Speed [cite: 455]
+#endif
 
+#define AW_BASE_Y(y) (((uint8_t)(y) * 18u))
+#define AW_BASE_X(x) (((uint8_t)(x) * 3u))
+#define AW_BASE_INDEX(x, y) (uint8_t)(AW_BASE_Y(y) + AW_BASE_X(x))
+
+#define AW_CMD_WRITE_PAGE(page) (uint8_t)(AW_CHIPID_SPI | ((page & 0x07) << 1) | 0x00)
+#define AW_CMD_READ_PAGE(page) (uint8_t)(AW_CHIPID_SPI | ((page & 0x07) << 1) | 0x01)
 
 //* AW20216S Class Definition */
 
-class AW20216S {
+class AW20216S
+{
 public:
     /**
      * Constructor
@@ -139,23 +156,17 @@ private:
     uint8_t _csPin;
     SPIClass *_spiPort;
     uint8_t _currentPage; // To optimize and avoid sending page commands if we are already there
-    uint8_t _rows; // number of rows
-    uint8_t _cols; // number of columns
+    uint8_t _rows;        // number of rows
+    uint8_t _cols;        // number of columns
 
     // Local buffer: 12 rows * 18 columns (6 red, 6 green, 6 blue)(CS) = 216 bytes.
-    uint8_t _frameBuffer[216];
+    uint8_t _frameBuffer[AW_MAX_LEDS];
 
-    /**
-     * Change the internal page of the chip if necessary.
-     * The SPI command byte includes the page ID.
-     */
-    void _setPage(uint8_t page);
-    
-    /**
-     * Converts RGB X,Y coordinates to physical LED indices (0-215).
-     * Assumes a standard R-G-B order in CS sinks.
-     */
-    void _getLedIndices(uint8_t x, uint8_t y, uint8_t &rIdx, uint8_t &gIdx, uint8_t &bIdx);
+#if AW_HAS_SPI_BULK_TRANSFER
+    uint8_t _spiScratch[AW_MAX_LEDS]; // Scratch buffer for SPI bulk transfer
+#endif
+
+    void _writePageBurst(uint8_t page, const uint8_t *data, uint16_t len);
 };
 
 #endif

@@ -1,14 +1,8 @@
 #include "AW20216S.h"
+#include <string.h>
 
 // Definitions of times (Datasheet Page 7 & 9)
 #define AW_RESET_DELAY 2 // 2ms delay after reset [cite: 524]
-
-// AVR (Uno/Leonardo): max SPI clock is typically F_CPU/2 => 8 MHz @ 16 MHz
-#if defined(ARDUINO_ARCH_AVR)
-#define AW_SPI_SPEED 8000000UL
-#else
-#define AW_SPI_SPEED 10000000 // 10MHz Max SPI Speed [cite: 455]
-#endif
 
 //******************************************************** */
 AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort)
@@ -18,6 +12,7 @@ AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort)
     _cols = cols;
     _spiPort = &spiPort;
     _currentPage = 0xFF; // Invalid value to force update
+    memset(_frameBuffer, 0, sizeof(_frameBuffer));
 }
 
 //******************************************************** */
@@ -56,27 +51,18 @@ void AW20216S::reset()
 
 void AW20216S::clearScreen()
 {
-    // Scan the entire matrix and turn off the LEDs
-    for (int y = 0; y < _rows; y++)
-    {
-        for (int x = 0; x < _cols; x++)
-        {
-            setPixel(x, y, 0, 0, 0);
-        }
-    }
+    memset(_frameBuffer, 0, AW_MAX_LEDS);
 }
 
 //******************************************************** */
 
 void AW20216S::fillScreen(uint8_t r, uint8_t g, uint8_t b)
 {
-    // It scans the entire matrix and sets a fixed color.
-    for (int y = 0; y < _rows; y++)
+    for (uint16_t i = 0; i < AW_MAX_LEDS; i += 3)
     {
-        for (int x = 0; x < _cols; x++)
-        {
-            setPixel(x, y, r, g, b);
-        }
+        _frameBuffer[i + 0] = r;
+        _frameBuffer[i + 1] = g;
+        _frameBuffer[i + 2] = b;
     }
 }
 
@@ -95,51 +81,19 @@ void AW20216S::setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b)
     if (x >= _cols || y >= _rows)
         return;
 
-    uint8_t rIdx, gIdx, bIdx;
-    _getLedIndices(x, y, rIdx, gIdx, bIdx);
+    // Physical layout: 18 channels per row, RGB packed
+    uint8_t *p = &_frameBuffer[AW_BASE_INDEX(x, y) ];
 
-    // We write on PAGE 1 (PWM Registers) [cite: 598]
-    // We could use PAGE 4 to write PWM+Scaling together,
-    // But for standard setPixel we use Page 1.
-
-    //* Old mode: Direct write to registers
-    // Note: Writing byte by byte is inefficient if the entire screen is being updated.
-    // But for individual setPixel it is correct.
-    // writeRegister(AW20216S_PAGE1, rIdx, r);
-    // writeRegister(AW20216S_PAGE1, gIdx, g);
-    // writeRegister(AW20216S_PAGE1, bIdx, b);
-
-    //* New mode: Update local framebuffer
-    _frameBuffer[rIdx] = r;
-    _frameBuffer[gIdx] = g;
-    _frameBuffer[bIdx] = b;
+    *p++ = r;
+    *p++ = g;
+    *p = b;
 }
 
 //******************************************************** */
 
 void AW20216S::show()
 {
-    // 1. SPI Config
-    _spiPort->beginTransaction(SPISettings(AW_SPI_SPEED, MSBFIRST, SPI_MODE0));
-    digitalWrite(_csPin, LOW);
-
-    // 2. Send write header for PAGE 1 (PWM)
-    // ID(0xA0) | PAGE1(0x02) | Write(0x00) = 0xA2
-    uint8_t commandByte = 0xA2;
-
-    _spiPort->transfer(commandByte);
-    _spiPort->transfer(0x00); // Initial Direction (First LED)
-
-    // 3. BURST MODE: Send all 216 bytes at once
-    // The chip automatically increments its internal address with each byte received
-    for (int i = 0; i < 216; i++)
-    {
-        _spiPort->transfer(_frameBuffer[i]);
-    }
-
-    // 4. End transaction
-    digitalWrite(_csPin, HIGH);
-    _spiPort->endTransaction();
+    _writePageBurst(AW20216S_PAGE1, _frameBuffer, AW_MAX_LEDS);
 }
 
 //******************************************************** */
@@ -150,37 +104,27 @@ void AW20216S::setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale)
     // This is useful for overall white balance.
     // We go through all the LEDs.
 
-    for (uint8_t y = 0; y < _rows; y++)
+    // Burst write all 216 scaling bytes (Page 2)
+    _spiPort->beginTransaction(SPISettings(AW_SPI_SPEED, MSBFIRST, SPI_MODE0));
+    digitalWrite(_csPin, LOW);
+
+    const uint8_t commandByte = AW_CMD_WRITE_PAGE(AW20216S_PAGE2);
+
+    _spiPort->transfer(commandByte);
+    _spiPort->transfer(0x00); // Start address
+
+    // Fill Page2 scaling registers in the same linear order as PWM:
+    uint16_t i = 0;
+    while (i < AW_MAX_LEDS)
     {
-        for (uint8_t x = 0; x < _cols; x++)
-        {
-            uint8_t rIdx, gIdx, bIdx;
-            _getLedIndices(x, y, rIdx, gIdx, bIdx);
-
-            writeRegister(AW20216S_PAGE2, rIdx, r_scale);
-            writeRegister(AW20216S_PAGE2, gIdx, g_scale);
-            writeRegister(AW20216S_PAGE2, bIdx, b_scale);
-        }
+        _spiPort->transfer(r_scale);
+        _spiPort->transfer(g_scale);
+        _spiPort->transfer(b_scale);
+        i += 3;
     }
-}
 
-//******************************************************** */
-
-//* --- Private and Low-Level Methods ---
-
-void AW20216S::_getLedIndices(uint8_t x, uint8_t y, uint8_t &rIdx, uint8_t &gIdx, uint8_t &bIdx)
-{
-    // The chip has 18 physical columns (CS1-CS18) and 12 rows (SW1-SW12).
-    // Logical mapping RGB 6x12 to Physical 18x12:
-    // Pixel(0,0) -> SW1 + CS1(R), CS2(G), CS3(B)
-    // The PWM register index is linear: (Row * 18) + Physical_Column
-
-    uint8_t baseIndex = (y * 18) + (x * 3);
-
-    // Assuming standard connection: CS1=R, CS2=G, CS3=B for the first pixel
-    rIdx = baseIndex + 0;
-    gIdx = baseIndex + 1;
-    bIdx = baseIndex + 2;
+    digitalWrite(_csPin, HIGH);
+    _spiPort->endTransaction();
 }
 
 //******************************************************** */
@@ -192,7 +136,7 @@ void AW20216S::writeRegister(uint8_t page, uint8_t reg, uint8_t value)
     // Bit 3-1: Page ID (0-4)
     // Bit 0:   W/R (0 = Write)
 
-    uint8_t commandByte = AW_CHIPID_SPI | ((page & 0x07) << 1) | 0x00;
+    uint8_t commandByte = AW_CMD_WRITE_PAGE(page);
 
     _spiPort->beginTransaction(SPISettings(AW_SPI_SPEED, MSBFIRST, SPI_MODE0));
 
@@ -210,9 +154,8 @@ void AW20216S::writeRegister(uint8_t page, uint8_t reg, uint8_t value)
 uint8_t AW20216S::readRegister(uint8_t page, uint8_t reg)
 {
     // Structure for Reading [cite: 555]
-    // Bit 0:   W/R (1 = Read)
 
-    uint8_t commandByte = AW_CHIPID_SPI | ((page & 0x07) << 1) | 0x01;
+    uint8_t commandByte = AW_CMD_READ_PAGE(page);
     uint8_t result = 0;
 
     _spiPort->beginTransaction(SPISettings(AW_SPI_SPEED, MSBFIRST, SPI_MODE0));
@@ -229,3 +172,30 @@ uint8_t AW20216S::readRegister(uint8_t page, uint8_t reg)
 }
 
 //******************************************************** */
+
+void AW20216S::_writePageBurst(uint8_t page, const uint8_t *data, uint16_t len)
+{
+    const uint8_t commandByte = AW_CMD_WRITE_PAGE(page);
+
+    _spiPort->beginTransaction(SPISettings(AW_SPI_SPEED, MSBFIRST, SPI_MODE0));
+    digitalWrite(_csPin, LOW);
+
+    _spiPort->transfer(commandByte);
+    _spiPort->transfer(0x00); // start address
+
+#if AW_HAS_SPI_BULK_TRANSFER
+    // Protect original buffer (SPI is full-duplex)
+    memcpy(_spiScratch, data, len);
+    _spiPort->transfer((void *)_spiScratch, (size_t)len);
+#else
+    // no bulk transfer so byte-wise transfer
+    const uint8_t *p = data;
+    while (len--)
+    {
+        _spiPort->transfer(*p++);
+    }
+#endif
+
+    digitalWrite(_csPin, HIGH);
+    _spiPort->endTransaction();
+}
