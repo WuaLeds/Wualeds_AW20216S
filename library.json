@@ -1,6 +1,6 @@
 {
   "name": "WuaLeds_AW20216S",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "SPI driver library for the AW20216S LED controller.",
   "keywords": ["aw20216s", "led", "rgb", "spi", "driver"],
   "repository": {
