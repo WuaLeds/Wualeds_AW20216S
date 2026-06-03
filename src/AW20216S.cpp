@@ -4,6 +4,15 @@
 #define AW_RESET_DELAY 2 // 2ms delay after reset [cite: 524]
 
 //******************************************************** */
+
+/**
+ * @brief Construct the driver and cache its configuration.
+ * 
+ * @param rows    Number of rows (SWy lines), 1-12.
+ * @param cols    Number of columns (RGB triplets), 1-6.
+ * @param csPin   MCU GPIO used as Chip Select (active LOW).
+ * @param spiPort SPI bus instance driving the chip.
+ */
 AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort)
 {
     _csPin = csPin;
@@ -16,6 +25,11 @@ AW20216S::AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort)
 
 //******************************************************** */
 
+/**
+ * @brief Start SPI, reset, enable the chip and set a default current.
+ * 
+ * @return true if the GCR register reads back as expected, false otherwise.
+ */
 bool AW20216S::begin()
 {
     pinMode(_csPin, OUTPUT);
@@ -40,6 +54,9 @@ bool AW20216S::begin()
 
 //******************************************************** */
 
+/**
+ * @brief Software reset (writes 0xAE to RSTN) and wait for OTP reload.
+ */
 void AW20216S::reset()
 {
     writeRegister(AW20216S_PAGE0, AW_REG_RSTN, AW_RST_CMD);
@@ -48,6 +65,9 @@ void AW20216S::reset()
 
 //******************************************************** */
 
+/**
+ * @brief Clear the framebuffer (all pixels off). Call show() to apply.
+ */
 void AW20216S::clearScreen()
 {
     _clearFrameBuffer();
@@ -55,6 +75,13 @@ void AW20216S::clearScreen()
 
 //******************************************************** */
 
+/**
+ * @brief Fill the framebuffer with one RGB color. Call show() to apply.
+ * 
+ * @param r Red   PWM value, 0-255.
+ * @param g Green PWM value, 0-255.
+ * @param b Blue  PWM value, 0-255.
+ */
 void AW20216S::fillScreen(uint8_t r, uint8_t g, uint8_t b)
 {
     for (uint16_t i = 0; i < AW_MAX_LEDS; i += 3)
@@ -67,6 +94,11 @@ void AW20216S::fillScreen(uint8_t r, uint8_t g, uint8_t b)
 
 //******************************************************** */
 
+/**
+ * @brief Write the global current (master brightness) register (GCCR).
+ * 
+ * @param current Master current, 0 (off) - 255 (max drive).
+ */
 void AW20216S::setGlobalCurrent(uint8_t current)
 {
     // Configure the overall current for all LEDs [cite: 31]
@@ -75,6 +107,15 @@ void AW20216S::setGlobalCurrent(uint8_t current)
 
 //******************************************************** */
 
+/**
+ * @brief Write one RGB pixel into the framebuffer. Call show() to apply.
+ * 
+ * @param x Column index, 0 - (cols-1). Out-of-range is ignored.
+ * @param y Row index,    0 - (rows-1). Out-of-range is ignored.
+ * @param r Red   PWM value, 0-255.
+ * @param g Green PWM value, 0-255.
+ * @param b Blue  PWM value, 0-255.
+ */
 void AW20216S::setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b)
 {
     if (x >= _cols || y >= _rows)
@@ -90,6 +131,9 @@ void AW20216S::setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b)
 
 //******************************************************** */
 
+/**
+ * @brief Burst-write the whole framebuffer (216 PWM bytes) to Page 1.
+ */
 void AW20216S::show()
 {
     _writePageBurst(AW20216S_PAGE1, _frameBuffer, AW_MAX_LEDS);
@@ -97,6 +141,13 @@ void AW20216S::show()
 
 //******************************************************** */
 
+/**
+ * @brief Burst-write per-channel scaling (Page 2) to every pixel.
+ * 
+ * @param r_scale Red   channel scale, 0 (off) - 255 (no attenuation).
+ * @param g_scale Green channel scale, 0 (off) - 255 (no attenuation).
+ * @param b_scale Blue  channel scale, 0 (off) - 255 (no attenuation).
+ */
 void AW20216S::setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale)
 {
     // Configure the mix current (Page 2) for all pixels.
@@ -128,6 +179,11 @@ void AW20216S::setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale)
 
 //******************************************************** */
 
+/**
+ * @brief Write the raw PCCR register (PWM clock), masking reserved bits.
+ * 
+ * @param pccr Raw value: bits [7:5] frequency divider, bits [1:0] phase.
+ */
 void AW20216S::setPwmClock(uint8_t pccr)
 {
     // Keep reserved bits [4:2] at 0
@@ -135,8 +191,15 @@ void AW20216S::setPwmClock(uint8_t pccr)
     writeRegister(AW20216S_PAGE0, AW_REG_PCCR, pccr);
 }
 
+/**
+ * @brief Build the PCCR value from a frequency/phase pair and write it.
+ * 
+ * @param freq  PWM frequency (AwPwmFreq), High = 62.5 kHz .. Low = 488 Hz.
+ * @param phase PWM phase scheme (AwPwmPhase), default PhaseDelay.
+ */
 void AW20216S::setPwmFrequency(AwPwmFreq freq, AwPwmPhase phase)
 {
+    // Pack PCCR: frequency divider in bits [7:5], phase in bits [1:0].
     const uint8_t pccr =
         (uint8_t)(((uint8_t)freq & 0x07) << 5) |
         (uint8_t)((uint8_t)phase & 0x03);
@@ -146,6 +209,14 @@ void AW20216S::setPwmFrequency(AwPwmFreq freq, AwPwmPhase phase)
 
 //******************************************************** */
 
+/**
+ * @brief Bind one channel of a pixel to a breathing pattern (Page 3).
+ * 
+ * @param x   Column index, 0 - (cols-1). Out-of-range is ignored.
+ * @param y   Row index,    0 - (rows-1). Out-of-range is ignored.
+ * @param ch  Channel: AwChannel::R, ::G or ::B.
+ * @param pat Pattern: PWM, PAT0, PAT1 or PAT2.
+ */
 void AW20216S::setChannelPattern(uint8_t x, uint8_t y, AwChannel ch, AwPattern pat)
 {
     if (x >= _cols || y >= _rows)
@@ -154,17 +225,29 @@ void AW20216S::setChannelPattern(uint8_t x, uint8_t y, AwChannel ch, AwPattern p
     const uint8_t base = AW_BASE_INDEX(x, y);          // channel base (R)
     const uint8_t led = (uint8_t)(base + (uint8_t)ch); // 0..215 (R/G/B channel)
 
+    // Page 3 packs 4 channels (2 bits each) per register: reg = led/3 group,
+    // shift = (led%3)*2 selects this channel's 2-bit field.
     const uint8_t reg = (uint8_t)(AW_REG_PATG_BASE + (led / 3u));
     const uint8_t shift = (uint8_t)((led % 3u) * 2u);
 
     const uint8_t pat2 = ((uint8_t)pat) & 0x03u;
 
+    // Read-modify-write so the other channels in this register are preserved.
     uint8_t v = readRegister(AW20216S_PAGE3, reg);
-    v &= (uint8_t)~(0x03u << shift);
-    v |= (uint8_t)(pat2 << shift);
+    v &= (uint8_t)~(0x03u << shift); // clear this channel's 2-bit field
+    v |= (uint8_t)(pat2 << shift);   // set the new pattern
     writeRegister(AW20216S_PAGE3, reg, v);
 }
 
+/**
+ * @brief Bind the R, G and B channels of a pixel to breathing patterns.
+ * 
+ * @param x    Column index, 0 - (cols-1).
+ * @param y    Row index,    0 - (rows-1).
+ * @param rPat Pattern for Red:   PWM, PAT0, PAT1 or PAT2.
+ * @param gPat Pattern for Green: PWM, PAT0, PAT1 or PAT2.
+ * @param bPat Pattern for Blue:  PWM, PAT0, PAT1 or PAT2.
+ */
 void AW20216S::setPixelPatternRGB(uint8_t x, uint8_t y, AwPattern rPat, AwPattern gPat, AwPattern bPat)
 {
     setChannelPattern(x, y, AwChannel::R, rPat);
@@ -172,13 +255,17 @@ void AW20216S::setPixelPatternRGB(uint8_t x, uint8_t y, AwPattern rPat, AwPatter
     setChannelPattern(x, y, AwChannel::B, bPat);
 }
 
-void AW20216S::configureBreathing(
-    AwPattern pat,
-    uint8_t t0,
-    uint8_t t1,
-    uint8_t t2,
-    uint8_t t3,
-    bool logarithmic)
+/**
+ * @brief Program the T0-T3 timings of a PATx engine and enable it.
+ * 
+ * @param pat         Pattern engine: PAT0, PAT1 or PAT2 (PWM is ignored).
+ * @param t0          Phase 0 rise time, 0-255.
+ * @param t1          Phase 1 on (hold high) time, 0-255.
+ * @param t2          Phase 2 fall time, 0-255.
+ * @param t3          Phase 3 off (hold low) time, 0-255.
+ * @param logarithmic true for logarithmic ramp, false for linear.
+ */
+void AW20216S::configureBreathing(AwPattern pat, uint8_t t0, uint8_t t1, uint8_t t2, uint8_t t3, bool logarithmic)
 {
     if (pat == AwPattern::PWM)
         return;
@@ -212,6 +299,13 @@ void AW20216S::configureBreathing(
     writeRegister(AW20216S_PAGE0, cfgAddr, cfg);
 }
 
+/**
+ * @brief Set the min/max brightness envelope of a PATx engine.
+ * 
+ * @param pat  Pattern engine: PAT0, PAT1 or PAT2 (PWM is ignored).
+ * @param minV Minimum brightness (bottom of breath), 0-255.
+ * @param maxV Maximum brightness (top of breath), 0-255.
+ */
 void AW20216S::setBreathingBrightness(AwPattern pat, uint8_t minV, uint8_t maxV)
 {
     if (pat == AwPattern::PWM)
@@ -222,6 +316,12 @@ void AW20216S::setBreathingBrightness(AwPattern pat, uint8_t minV, uint8_t maxV)
     writeRegister(AW20216S_PAGE0, (uint8_t)(AW_REG_PWML0 + idx), minV);
 }
 
+/**
+ * @brief Enable or disable a breathing engine by writing its PATxCFG.
+ * 
+ * @param pat    Pattern engine: PAT0, PAT1 or PAT2.
+ * @param enable true to enable, false to disable.
+ */
 void AW20216S::enableBreathing(AwPattern pat, bool enable)
 {
     uint8_t addr = AW_REG_PAT0CFG + (uint8_t)pat;
@@ -230,6 +330,11 @@ void AW20216S::enableBreathing(AwPattern pat, bool enable)
     writeRegister(AW20216S_PAGE0, addr, cfg);
 }
 
+/**
+ * @brief Trigger/restart a breathing engine via the PATGO register.
+ * 
+ * @param pat Pattern engine to start: PAT0, PAT1 or PAT2 (PWM is ignored).
+ */
 void AW20216S::startBreathing(AwPattern pat)
 {
     if (pat == AwPattern::PWM)
@@ -241,6 +346,13 @@ void AW20216S::startBreathing(AwPattern pat)
 
 //******************************************************** */
 
+/**
+ * @brief Write one byte to a register using a 3-byte SPI write frame.
+ * 
+ * @param page  Target page, 0-4.
+ * @param reg   Register address within the page, 0x00-0xFF.
+ * @param value Byte to write.
+ */
 void AW20216S::writeRegister(uint8_t page, uint8_t reg, uint8_t value)
 {
     // SPI Command Byte Structure [cite: 541, 543]
@@ -263,6 +375,13 @@ void AW20216S::writeRegister(uint8_t page, uint8_t reg, uint8_t value)
 
 //******************************************************** */
 
+/**
+ * @brief Read one byte from a register (sends a dummy byte to clock it out).
+ * 
+ * @param page Target page, 0-4.
+ * @param reg  Register address within the page, 0x00-0xFF.
+ * @return The byte read back from the register.
+ */
 uint8_t AW20216S::readRegister(uint8_t page, uint8_t reg)
 {
     // Structure for Reading [cite: 555]
@@ -285,6 +404,13 @@ uint8_t AW20216S::readRegister(uint8_t page, uint8_t reg)
 
 //******************************************************** */
 
+/**
+ * @brief Burst-write a block of bytes to a page in one SPI transaction.
+ * 
+ * @param page Target page, 0-4 (data starts at register address 0x00).
+ * @param data Source buffer to transmit.
+ * @param len  Number of bytes to transmit.
+ */
 void AW20216S::_writePageBurst(uint8_t page, const uint8_t *data, uint16_t len)
 {
     const uint8_t commandByte = AW_CMD_WRITE_PAGE(page);

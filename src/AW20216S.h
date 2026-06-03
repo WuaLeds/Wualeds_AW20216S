@@ -59,10 +59,13 @@
 #define AW_MAX_LEDS             216
 
 // --- General Enumerations ---
+
+// Color channel inside an RGB pixel. The value is also the byte offset of the
+// channel within the pixel triplet in the framebuffer (R first, then G, B).
 enum class AwChannel : uint8_t {
-    R = 0,
-    G = 1,
-    B = 2
+    R = 0, // Red   channel (offset 0)
+    G = 1, // Green channel (offset 1)
+    B = 2  // Blue  channel (offset 2)
 };
 
 // --- PAGE 0: Enumerations ---
@@ -83,21 +86,25 @@ enum class AwPwmFreq : uint8_t {
     Hz488  = 0b111
 };
 
+// PWM Phase Options (PCCR Register bits [1:0]). Controls how channel switching
+// is staggered to spread current peaks and shape EMI.
 enum class AwPwmPhase : uint8_t {
-    PhaseDelay  = 0b00,
-    PhaseInvert = 0b01,
-    ThreePhase2 = 0b10,
-    ThreePhase3 = 0b11
+    PhaseDelay  = 0b00, // Default: phase-delayed switching (lowers peak current)
+    PhaseInvert = 0b01, // Inverted phase
+    ThreePhase2 = 0b10, // 3-phase mode, variant 2
+    ThreePhase3 = 0b11  // 3-phase mode, variant 3
 };
 
 // --- PAGE 3: Breathing enums ---
 
-// --- Breathing Pattern ---
+// Breathing pattern assignment for a channel. PWM means the channel follows
+// the PWM register directly; PAT0..PAT2 bind it to one of the three
+// autonomous breathing engines configured via configureBreathing().
 enum class AwPattern : uint8_t {
     PWM  = 0b00, // No breathing, direct PWM control
-    PAT0 = 0b01,
-    PAT1 = 0b10,
-    PAT2 = 0b11
+    PAT0 = 0b01, // Breathing engine 0
+    PAT1 = 0b10, // Breathing engine 1
+    PAT2 = 0b11  // Breathing engine 2
 };
 
 //******************************************************** */
@@ -142,93 +149,147 @@ class AW20216S
 {
 public:
     /**
-     * Constructor
-     * @param rows number of rows
-     * @param cols number of columns
-     * @param csPin Chip Select Pin
-     * @param spiPort SPI port to use (default SPI)
+     * @brief Construct the driver for one AW20216S device.
+     *
+     * Stores the geometry and SPI configuration but does NOT touch the
+     * hardware yet; call begin() before any other method.
+     *
+     * @param rows    Number of rows (SWy lines) wired to the matrix.
+     *                For the LMX2 6x12 RGB panel this is 12. Valid range 1-12.
+     * @param cols    Number of columns (RGB triplets / CSx groups).
+     *                For the LMX2 6x12 RGB panel this is 6. Valid range 1-6.
+     * @param csPin   MCU GPIO used as Chip Select (active LOW).
+     *                Typical values: 10 on Arduino UNO, 5 or 15 on ESP32.
+     * @param spiPort SPI bus instance to drive the chip. Defaults to the
+     *                board's primary `SPI`. Pass e.g. `SPI1` / `HSPI` on MCUs
+     *                that expose several SPI peripherals.
      */
     AW20216S(uint8_t rows, uint8_t cols, uint8_t csPin, SPIClass &spiPort = SPI);
 
     /**
-     * Initialize the chip, configure SPI, and reset registers.
-     * @return true if the initialization was successful (successful communication).
+     * @brief Initialize the chip and bring it to a usable default state.
+     *
+     * Sets CS as output, starts the SPI bus, performs a software reset,
+     * enables the device (GCR) and applies a safe default global current.
+     *
+     * @return true  if communication succeeded (GCR read back as expected).
+     * @return false if the chip did not acknowledge (check wiring / CS pin).
      */
     bool begin();
 
     /**
-     * Software reset (returns registers to default).
+     * @brief Perform a software reset, restoring power-on register defaults.
+     *
+     * Writes 0xAE to RSTN and blocks ~2 ms while the OTP reloads.
      */
     void reset();
 
     /**
-     * Clears the internal framebuffer (all pixels to 0).
+     * @brief Clear the internal framebuffer (all pixels set to 0 / off).
+     * @note RAM-only operation. Call show() to push the cleared buffer to the chip.
      */
     void clearScreen();
 
     /**
-     * Fill the entire screen framebuffer with a specific color.
-     * @param r red color component value
-     * @param g green color component value
-     * @param b blue color component value
+     * @brief Fill the whole framebuffer with a single RGB color.
+     *
+     * @param r Red   PWM value, 0 (off) - 255 (full).
+     * @param g Green PWM value, 0 (off) - 255 (full).
+     * @param b Blue  PWM value, 0 (off) - 255 (full).
+     * @note RAM-only operation. Call show() to make it visible.
      */
     void fillScreen(uint8_t r, uint8_t g, uint8_t b);
 
     /**
-     * Configure the global current (Master Brightness).
-     * @param current Value 0-255.
+     * @brief Set the global current (master brightness) shared by all LEDs.
+     *
+     * Writes the GCCR register immediately over SPI.
+     *
+     * @param current Master current, 0 (LEDs off) - 255 (maximum drive).
+     *                Higher values increase brightness and power draw; keep
+     *                it moderate (e.g. 0x40) to limit total consumption.
      */
     void setGlobalCurrent(uint8_t current);
 
     /**
-     * Configure a color in the RGB matrix (X, Y coordinates).
-     * @param x Column (0-5 for your 6x12 RGB matrix)
-     * @param y Row (0-11)
-     * @param r Red Value (0-255)
-     * @param g Green Value (0-255)
-     * @param b Blue Value (0-255)
-     * Note: Writes to internal frame buffer.
+     * @brief Write a single RGB pixel into the framebuffer.
+     *
+     * Out-of-range coordinates are ignored (no-op).
+     *
+     * @param x Column index, 0 - (cols-1) (0-5 on the 6x12 panel).
+     * @param y Row index,    0 - (rows-1) (0-11 on the 6x12 panel).
+     * @param r Red   PWM value, 0 (off) - 255 (full).
+     * @param g Green PWM value, 0 (off) - 255 (full).
+     * @param b Blue  PWM value, 0 (off) - 255 (full).
+     * @note RAM-only operation. Call show() to push the buffer to the chip.
      */
     void setPixel(uint8_t x, uint8_t y, uint8_t r, uint8_t g, uint8_t b);
 
     /**
-     * Send the entire buffer (_frameBuffer) to the chip at once.
+     * @brief Push the whole framebuffer to the chip (Page 1) in one burst.
+     *
+     * Sends the 216 PWM bytes in a single SPI transaction. Call this after
+     * setPixel/fillScreen/clearScreen to make the changes visible.
      */
     void show();
 
     /**
-     * Configure the mixing stream (Scaling) for white balance.
-     * @param r_scale Scale for Red channel (0-255)
-     * @param g_scale Scale for Green channel (0-255)
-     * @param b_scale Scale for Blue channel (0-255)
+     * @brief Set the per-channel scaling (current trim) for white balance.
+     *
+     * Applies the same scaling to every pixel and writes Page 2 immediately
+     * over SPI (does not use the framebuffer).
+     *
+     * @param r_scale Red   channel scale, 0 (off) - 255 (no attenuation).
+     * @param g_scale Green channel scale, 0 (off) - 255 (no attenuation).
+     * @param b_scale Blue  channel scale, 0 (off) - 255 (no attenuation).
+     * @note Final brightness ≈ globalCurrent x scaling x PWM. Set to
+     *       (0xFF, 0xFF, 0xFF) for full output, then lower a channel to
+     *       correct the white point.
      */
     void setScaling(uint8_t r_scale, uint8_t g_scale, uint8_t b_scale);
 
     /** PWM support */
 
     /**
-     * Configure the PWM clock by setting the PCCR register.
-     * @param pccr Value to set in the PCCR register.
+     * @brief Low-level write of the raw PCCR register (PWM clock control).
+     *
+     * Reserved bits [4:2] are masked off before writing.
+     *
+     * @param pccr Raw register value. Bits [7:5] = PWM frequency divider,
+     *             bits [1:0] = PWM phase. Prefer setPwmFrequency() unless
+     *             you need direct register access.
      */
     void setPwmClock(uint8_t pccr);
 
     /**
-     * Configure the PWM frequency and phase.
-     * @param freq PWM Frequency setting
-     * @param phase PWM Phase setting (default: PhaseDelay)
+     * @brief Configure the PWM frequency and phase via the PCCR register.
+     *
+     * @param freq  PWM frequency (AwPwmFreq), from High = 62.5 kHz down to
+     *              Low = 488 Hz. Higher frequencies reduce visible flicker,
+     *              especially when filming the panel.
+     * @param phase PWM phase / delay scheme (AwPwmPhase). Default PhaseDelay
+     *              staggers channels to lower peak current; the alternatives
+     *              invert or split the phase across drivers.
      */
     void setPwmFrequency(AwPwmFreq freq, AwPwmPhase phase = AwPwmPhase::PhaseDelay);
 
     /** Breathing support */
 
     /**
-     * Configure basic breathing timing (T0–T3)
-     * @param pat Pattern to configure (PAT0, PAT1, PAT2)
-     * @param t0 Time for Phase 0 (Rise Time)
-     * @param t1 Time for Phase 1 (On Time)
-     * @param t2 Time for Phase 2 (Fall Time)
-     * @param t3 Time for Phase 3 (Off Time)
-     * @param logarithmic true for logarithmic timing, false for linear (default: false)
+     * @brief Configure the timing of one breathing engine (PATx) and enable it.
+     *
+     * Enables the engine in autonomous mode. The four phases form one breath
+     * cycle: rise (T0) -> hold high (T1) -> fall (T2) -> hold low (T3).
+     *
+     * @param pat         Pattern engine to configure: PAT0, PAT1 or PAT2.
+     *                    Passing PWM is ignored (no engine).
+     * @param t0          Phase 0 rise time (dim -> bright), 0-255.
+     * @param t1          Phase 1 on time (hold at max), 0-255.
+     * @param t2          Phase 2 fall time (bright -> dim), 0-255.
+     * @param t3          Phase 3 off time (hold at min), 0-255.
+     *                    Larger values mean longer phases (slower breathing).
+     * @param logarithmic true  -> logarithmic ramp (perceptually smoother);
+     *                    false -> linear ramp (default).
      */
     void configureBreathing(
         AwPattern pat,
@@ -238,72 +299,106 @@ public:
         uint8_t t3,
         bool logarithmic = false);
 
-    /** 
-     * Set breathing pattern for a specific channel of a pixel
-     * @param x Column (0-5 for 6x12 RGB matrix)
-     * @param y Row (0-11)
-     * @param ch Channel to assign (R, G, B)
-     * @param pat Pattern to assign (PAT0, PAT1, PAT2)
+    /**
+     * @brief Assign a single color channel of one pixel to a breathing pattern.
+     *
+     * Out-of-range coordinates are ignored (no-op).
+     *
+     * @param x   Column index, 0 - (cols-1) (0-5 on the 6x12 panel).
+     * @param y   Row index,    0 - (rows-1) (0-11 on the 6x12 panel).
+     * @param ch  Channel to drive: AwChannel::R, ::G or ::B.
+     * @param pat Pattern to bind: PWM (direct control, no breathing),
+     *            PAT0, PAT1 or PAT2.
      */
     void setChannelPattern(uint8_t x, uint8_t y, AwChannel ch, AwPattern pat);
 
     /**
-     * Set breathing patterns for R, G, and B channels of a pixel
-     * @param x Column (0-5 for 6x12 RGB matrix)
-     * @param y Row (0-11)
-     * @param rPat Pattern for Red channel (PAT0, PAT1, PAT2)
-     * @param gPat Pattern for Green channel (PAT0, PAT1, PAT2)
-     * @param bPat Pattern for Blue channel (PAT0, PAT1, PAT2
+     * @brief Assign breathing patterns to the R, G and B channels of one pixel.
+     *
+     * Convenience wrapper that calls setChannelPattern() for each channel.
+     *
+     * @param x    Column index, 0 - (cols-1) (0-5 on the 6x12 panel).
+     * @param y    Row index,    0 - (rows-1) (0-11 on the 6x12 panel).
+     * @param rPat Pattern for the Red   channel: PWM, PAT0, PAT1 or PAT2.
+     * @param gPat Pattern for the Green channel: PWM, PAT0, PAT1 or PAT2.
+     * @param bPat Pattern for the Blue  channel: PWM, PAT0, PAT1 or PAT2.
      */
     void setPixelPatternRGB(uint8_t x, uint8_t y, AwPattern rPat, AwPattern gPat, AwPattern bPat);
 
     /**
-     * Set the minimum and maximum brightness for a breathing pattern
-     * @param pat Pattern to configure (PAT0, PAT1, PAT2)
-     * @param minV Minimum brightness (0-255)
-     * @param maxV Maximum brightness (0-255)
+     * @brief Set the brightness envelope (min/max) of a breathing engine.
+     *
+     * @param pat  Pattern engine: PAT0, PAT1 or PAT2 (PWM is ignored).
+     * @param minV Minimum brightness at the bottom of the breath, 0-255.
+     * @param maxV Maximum brightness at the top of the breath, 0-255.
+     *             Keep minV < maxV for a visible breathing effect.
      */
     void setBreathingBrightness(AwPattern pat, uint8_t minV, uint8_t maxV);
 
     /**
-     * Enable or disable breathing for a specific pattern
-     * @param pat Pattern to configure (PAT0, PAT1, PAT2)
-     * @param enable true to enable, false to disable
+     * @brief Enable or disable a breathing pattern engine (writes PATxCFG).
+     *
+     * @param pat    Pattern engine: PAT0, PAT1 or PAT2.
+     * @param enable true to enable the engine, false to disable it.
      */
     void enableBreathing(AwPattern pat, bool enable);
 
     /**
-     * Start the breathing effect for a specific pattern
-     * @param pat Pattern to start (PAT0, PAT1, PAT2)
+     * @brief Trigger / restart the breathing animation of a pattern engine.
+     *
+     * Sets the matching bit in the PATGO register.
+     *
+     * @param pat Pattern engine to start: PAT0, PAT1 or PAT2 (PWM ignored).
      */
     void startBreathing(AwPattern pat);
 
     /** Extra advanced functions */
 
     /**
-     * Advanced function to directly write a RAW record.
+     * @brief Low-level: write one raw byte to any register on any page.
+     *
+     * @param page  Target page: AW20216S_PAGE0..PAGE4 (0-4).
+     * @param reg   Register address within the page (0x00-0xFF).
+     * @param value Byte to write.
      */
     void writeRegister(uint8_t page, uint8_t reg, uint8_t value);
+
     /**
-     * Advanced function to directly read a RAW record.
+     * @brief Low-level: read one raw byte from any register on any page.
+     *
+     * @param page Target page: AW20216S_PAGE0..PAGE4 (0-4).
+     * @param reg  Register address within the page (0x00-0xFF).
+     * @return The byte currently stored in that register.
      */
     uint8_t readRegister(uint8_t page, uint8_t reg);
 
 private:
-    uint8_t _csPin;
-    SPIClass *_spiPort;
-    uint8_t _currentPage; // To optimize and avoid sending page commands if we are already there
-    uint8_t _rows;        // number of rows
-    uint8_t _cols;        // number of columns
+    uint8_t _csPin;       // MCU GPIO used as Chip Select (active LOW)
+    SPIClass *_spiPort;   // SPI bus instance driving the chip
+    uint8_t _currentPage; // Last page selected, to skip redundant page commands
+    uint8_t _rows;        // Number of rows (SWy lines), 1-12
+    uint8_t _cols;        // Number of columns (RGB triplets), 1-6
 
-    // Local buffer: 12 rows * 18 columns (6 red, 6 green, 6 blue)(CS) = 216 bytes.
+    // Local framebuffer: 12 rows * 18 channels (6 R + 6 G + 6 B) = 216 bytes.
     uint8_t _frameBuffer[AW_MAX_LEDS];
 
 #if AW_HAS_SPI_BULK_TRANSFER
-    uint8_t _spiScratch[AW_MAX_LEDS]; // Scratch buffer for SPI bulk transfer
+    uint8_t _spiScratch[AW_MAX_LEDS]; // Copy buffer so the full-duplex bulk
+                                      // transfer never clobbers _frameBuffer
 #endif
 
+    /**
+     * @brief Burst-write a contiguous block of bytes to one page in a single
+     *        SPI transaction, starting at register address 0x00.
+     * @param page Target page (0-4).
+     * @param data Source bytes to send.
+     * @param len  Number of bytes to send.
+     */
     void _writePageBurst(uint8_t page, const uint8_t *data, uint16_t len);
+
+    /**
+     * @brief Zero the whole framebuffer (RAM only, does not touch the chip).
+     */
     inline void _clearFrameBuffer()
     {
         memset(_frameBuffer, 0, AW_MAX_LEDS);
