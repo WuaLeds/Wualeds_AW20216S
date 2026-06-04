@@ -9,6 +9,8 @@
 
 > Driver for **LMX2** — a **6 × 12 RGB LED matrix** (216 LEDs) built around the **Awinic AW20216S** constant-current LED controller, driven over SPI from any Arduino-compatible MCU.
 
+> 🆕 **New to the library?** Read the **[Getting Started guide](docs/GETTING_STARTED.md)** first, then keep the **[Manual / API Reference](docs/MANUAL.md)** handy.
+
 ---
 
 ## ✨ What is LMX2?
@@ -145,6 +147,17 @@ void setup() {
 
 void loop() {}
 ```
+
+---
+
+## 📚 Documentation
+
+Full guides live in the [`docs/`](docs/) folder:
+
+| Document | What's inside |
+|---|---|
+| 🚀 **[Getting Started](docs/GETTING_STARTED.md)** | Install, wiring, your first sketch, common recipes and troubleshooting. **Start here.** |
+| 📖 **[Manual / API Reference](docs/MANUAL.md)** | Every function, argument and enum explained, plus the brightness pipeline and coordinate system. |
 
 ---
 
