@@ -158,6 +158,7 @@ Full guides live in the [`docs/`](docs/) folder:
 |---|---|
 | 🚀 **[Getting Started](docs/GETTING_STARTED.md)** | Install, wiring, your first sketch, common recipes and troubleshooting. **Start here.** |
 | 📖 **[Manual / API Reference](docs/MANUAL.md)** | Every function, argument and enum explained, plus the brightness pipeline and coordinate system. |
+| 🤖 **[Porting Skill](docs/skill/SKILL.md)** | AI-oriented reference to port / re-implement this driver on **any MCU** (ESP-IDF, Pico SDK, STM32 HAL, bare-metal, MicroPython, Rust…). The SPI protocol, register map and init sequence are platform-independent — only a tiny HAL changes. |
 
 ---
 
