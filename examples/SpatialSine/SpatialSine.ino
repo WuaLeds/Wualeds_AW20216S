@@ -1,10 +1,23 @@
+// Example: SpatialSine — animated RGB sine wave across the panel.
+// Build/upload with:  pio run -e spatial_sine -t upload -t monitor
+
+#include <Arduino.h>
 #include "AW20216S.h"
 
-#define CS_PIN 10
+//*********************************************************** */
+//***********        Definitions                              */
+//*********************************************************** */
+// ── Pins ─────────────────────────────────────────────────
+#define PIN_SCK  18
+#define PIN_MISO 19
+#define PIN_MOSI 23
+
+// Chip Select (CS) pin. On ESP32 the VSPI default CS is GPIO 5.
+#define CS_PIN 5
 #define WIDTH_LED_MATRIX  6
 #define HEIGHT_LED_MATRIX 12
 
-AW20216S ledMatrix(HEIGHT_LED_MATRIX, WIDTH_LED_MATRIX, CS_PIN);
+AW20216S ledMatrix(HEIGHT_LED_MATRIX, WIDTH_LED_MATRIX, CS_PIN, SPI);
 
 // -------------------- Sine LUT (quarter-wave, 64 samples) --------------------
 // Values are sin(theta) scaled to 0..255 for theta in [0..pi/2).
@@ -65,10 +78,16 @@ static const uint8_t kOffR = 0;
 static const uint8_t kOffG = 85;   // ~120 degrees
 static const uint8_t kOffB = 170;  // ~240 degrees
 
+//*********************************************************** */
+//***********        Setup Function                           */
+//*********************************************************** */
 void setup()
 {
   Serial.begin(115200);
   Serial.println("Starting AW20216S spatial sine RGB...");
+  delay(500);
+  SPI.begin(PIN_SCK, PIN_MISO, PIN_MOSI, CS_PIN);
+  delay(50);
 
   if (!ledMatrix.begin()) {
     Serial.println("Error: AW20216S chip not detected.");
@@ -81,13 +100,17 @@ void setup()
   ledMatrix.show();
 }
 
+//*********************************************************** */
+//***********        Main Loop Function                       */
+//*********************************************************** */
+
 void loop()
 {
   static uint32_t lastMs = 0;
   static uint8_t t = 0;
 
   const uint32_t now = millis();
-  if ((now - lastMs) < 20) return; 
+  if ((now - lastMs) < 20) return;
   lastMs = now;
 
   t = (uint8_t)(t + kSpeed);
