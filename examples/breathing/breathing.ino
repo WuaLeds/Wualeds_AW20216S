@@ -1,20 +1,26 @@
+// Example: breathing — hardware breathing engines (PAT0/PAT1/PAT2).
+// Build/upload with:  pio run -e breathing -t upload -t monitor
+
+#include <Arduino.h>
 #include "AW20216S.h"
 
 //*********************************************************** */
 //***********        Definitions                              */
 //*********************************************************** */
+// ── Pins ─────────────────────────────────────────────────
+#define PIN_SCK  18
+#define PIN_MISO 19
+#define PIN_MOSI 23
 
-// Chip Select (CS) pin definition
-// On Arduino UNO it is usually 10. On ESP32 it can be 5 or 15.
-#define CS_PIN 10
+// Chip Select (CS) pin. On ESP32 the VSPI default CS is GPIO 5.
+#define CS_PIN 5
 
 // Row and Column definitions for the 6x12 RGB matrix
 #define WIDTH_LED_MATRIX 6
 #define HEIGHT_LED_MATIX 12
 
-// Instantiate the object.
-// If you are using a microcontroller with multiple SPIs, you can pass &SPI1, etc.
-AW20216S ledMatrix(HEIGHT_LED_MATIX, WIDTH_LED_MATRIX, CS_PIN);
+// Instantiate the object (uses the default SPI / VSPI bus).
+AW20216S ledMatrix(HEIGHT_LED_MATIX, WIDTH_LED_MATRIX, CS_PIN, SPI);
 
 //*********************************************************** */
 //***********        Setup Function                           */
@@ -24,6 +30,9 @@ void setup()
 {
     Serial.begin(115200);
     Serial.println("Starting AW20216S...");
+    delay(500);
+    SPI.begin(PIN_SCK, PIN_MISO, PIN_MOSI, CS_PIN);
+    delay(50);
 
     // 1. Initialize the chip
     if (!ledMatrix.begin())
@@ -73,5 +82,3 @@ void setup()
 void loop()
 {
 }
-
-//*********************************************************** */
