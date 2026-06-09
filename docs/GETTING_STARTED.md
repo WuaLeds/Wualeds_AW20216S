@@ -197,9 +197,22 @@ RGB version using all three engines.
 
 ## 6. 📂 Where to go next
 
+**Start here**
 - 🔴 **[Basic example](../examples/Basic/Basic.ino)** — the simplest starting point.
-- 🌬️ **[breathing example](../examples/breathing/breathing.ino)** — hardware breathing effects.
+- 🌈 **[ColorWheel example](../examples/ColorWheel/color_wheel.ino)** — full-panel rainbow from an integer HSV→RGB conversion.
+- 💡 **[BrightnessFade example](../examples/BrightnessFade/brightness_fade.ino)** — fade in/out using only `setGlobalCurrent()`.
+- ⚖️ **[WhiteBalance example](../examples/WhiteBalance/white_balance.ino)** — trim R/G/B over Serial to calibrate the white point.
+
+**Graphics on the framebuffer**
+- 🔤 **[TextScroll example](../examples/TextScroll/text_scroll.ino)** — scrolling marquee text with a 3×5 pixel font.
+- 🖼️ **[IconViewer example](../examples/IconViewer/icon_viewer.ino)** — cycling gallery of ASCII-art color icons.
+- 🦠 **[GameOfLife example](../examples/GameOfLife/game_of_life.ino)** — Conway's Game of Life with a wrap-around world.
 - 🌈 **[SpatialSine example](../examples/SpatialSine/SpatialSine.ino)** — animated rainbow wave.
+- 🔥 **[FirePalette example](../examples/FirePalette/fire_palette.ino)** — rising flame from a heat field + color palette.
+- 🏓 **[Pong example](../examples/Pong/pong.ino)** — self-playing Pong with sub-pixel ball physics.
+
+**Hardware features & reference**
+- 🌬️ **[breathing example](../examples/breathing/breathing.ino)** — hardware breathing effects.
 - 📖 **[Manual / API Reference](MANUAL.md)** — every function explained in detail.
 
 ---

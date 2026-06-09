@@ -166,11 +166,31 @@ Full guides live in the [`docs/`](docs/) folder:
 
 The [`examples/`](examples/) folder contains ready-to-run sketches:
 
+**Start here**
+
 | Example | Description |
 |---|---|
 | 🔴 **[Basic](examples/Basic/Basic.ino)** | A red pixel running across the matrix + a full-screen blue flash. The best place to start. |
-| 🌬️ **[breathing](examples/breathing/breathing.ino)** | Uses the chip's autonomous breathing engines (PAT0–PAT2) to make R/G/B fade in and out with no MCU load. |
+| 🌈 **[ColorWheel](examples/ColorWheel/color_wheel.ino)** | Fills the whole panel with a color that sweeps the rainbow, generated on the fly with an integer HSV→RGB conversion (no lookup table). |
+| 💡 **[BrightnessFade](examples/BrightnessFade/brightness_fade.ino)** | Paints a fixed color once and fades it in/out using only `setGlobalCurrent()` — isolates the master-brightness stage. |
+| ⚖️ **[WhiteBalance](examples/WhiteBalance/white_balance.ino)** | Shows full white and lets you trim R/G/B over Serial with `setScaling()` to calibrate the white point. |
+
+**Graphics on the framebuffer**
+
+| Example | Description |
+|---|---|
+| 🔤 **[TextScroll](examples/TextScroll/text_scroll.ino)** | Horizontal marquee text rendered with a built-in 3×5 pixel font, scrolled across a virtual canvas. |
+| 🖼️ **[IconViewer](examples/IconViewer/icon_viewer.ino)** | A gallery of multi-color icons stored as editable ASCII-art bitmaps, cycling every couple of seconds. |
+| 🦠 **[GameOfLife](examples/GameOfLife/game_of_life.ino)** | Conway's Game of Life on the 6×12 grid with a toroidal (wrap-around) world and auto-reseed when it stalls. |
 | 🌈 **[SpatialSine](examples/SpatialSine/SpatialSine.ino)** | An animated spatial sine wave with per-channel phase offsets, producing a smooth scrolling rainbow. |
+| 🔥 **[FirePalette](examples/FirePalette/fire_palette.ino)** | A rising flame built from a per-pixel "heat" field mapped to color through a fire palette. |
+| 🏓 **[Pong](examples/Pong/pong.ino)** | A self-playing Pong: a bouncing ball with sub-pixel physics and two AI paddles. |
+
+**Hardware features of the chip**
+
+| Example | Description |
+|---|---|
+| 🌬️ **[breathing](examples/breathing/breathing.ino)** | Uses the chip's autonomous breathing engines (PAT0–PAT2) to make R/G/B fade in and out with no MCU load. |
 
 ---
 
