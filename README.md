@@ -158,13 +158,16 @@ Full guides live in the [`docs/`](docs/) folder:
 |---|---|
 | 🚀 **[Getting Started](docs/GETTING_STARTED.md)** | Install, wiring, your first sketch, common recipes and troubleshooting. **Start here.** |
 | 📖 **[Manual / API Reference](docs/MANUAL.md)** | Every function, argument and enum explained, plus the brightness pipeline and coordinate system. |
+| 🎓 **[Examples Guide](docs/EXAMPLES.md)** | Every example sketch explained in learning order across three levels, with code walkthroughs. |
 | 🤖 **[Porting Skill](docs/skill/SKILL.md)** | AI-oriented reference to port / re-implement this driver on **any MCU** (ESP-IDF, Pico SDK, STM32 HAL, bare-metal, MicroPython, Rust…). The SPI protocol, register map and init sequence are platform-independent — only a tiny HAL changes. |
 
 ---
 
 ## 📂 Examples
 
-The [`examples/`](examples/) folder contains ready-to-run sketches:
+The [`examples/`](examples/) folder contains ready-to-run sketches, ordered as a
+learning path across three levels. Each one is fully explained — with code
+walkthroughs — in the **[Examples guide](docs/EXAMPLES.md)**.
 
 **Start here**
 
@@ -186,11 +189,16 @@ The [`examples/`](examples/) folder contains ready-to-run sketches:
 | 🔥 **[FirePalette](examples/FirePalette/fire_palette.ino)** | A rising flame built from a per-pixel "heat" field mapped to color through a fire palette. |
 | 🏓 **[Pong](examples/Pong/pong.ino)** | A self-playing Pong: a bouncing ball with sub-pixel physics and two AI paddles. |
 
-**Hardware features of the chip**
+**Hardware features & integration**
 
 | Example | Description |
 |---|---|
 | 🌬️ **[breathing](examples/breathing/breathing.ino)** | Uses the chip's autonomous breathing engines (PAT0–PAT2) to make R/G/B fade in and out with no MCU load. |
+| 🫧 **[MixedBreathing](examples/MixedBreathing/mixed_breathing.ino)** | Mixes hardware breathing on one band with MCU-driven direct PWM on another, using per-channel `setChannelPattern()` routing. |
+| 📷 **[PwmFrequencySweep](examples/PWMFrequencySweep/pwm_frequency_sweep.ino)** | Steps the PWM frequency from 62.5 kHz down to 488 Hz to show flicker on camera — the only example focused on `setPwmFrequency()`. |
+| 🩺 **[RegisterDump](examples/RegisterDump/register_dump.ino)** | A Serial diagnostics tool: link check, config + Open/Short register dump and a write/read round-trip via `readRegister()`/`writeRegister()`. |
+| 🧩 **[MultiPanel](examples/MultiPanel/multi_panel.ino)** | Drives two chips on one SPI bus (separate CS) as a single 12×12 canvas with a seamless rainbow. |
+| 📊 **[VuMeter](examples/VuMeter/vu_meter.ino)** | A vertical VU meter fed by external input (Serial or analog mic/pot), with VU ballistics and a peak-hold marker. |
 
 ---
 

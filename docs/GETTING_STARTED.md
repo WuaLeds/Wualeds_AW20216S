@@ -197,22 +197,34 @@ RGB version using all three engines.
 
 ## 6. 📂 Where to go next
 
-**Start here**
-- 🔴 **[Basic example](../examples/Basic/Basic.ino)** — the simplest starting point.
-- 🌈 **[ColorWheel example](../examples/ColorWheel/color_wheel.ino)** — full-panel rainbow from an integer HSV→RGB conversion.
-- 💡 **[BrightnessFade example](../examples/BrightnessFade/brightness_fade.ino)** — fade in/out using only `setGlobalCurrent()`.
-- ⚖️ **[WhiteBalance example](../examples/WhiteBalance/white_balance.ino)** — trim R/G/B over Serial to calibrate the white point.
+The [`examples/`](../examples/) folder is a learning path across three levels.
+Below is a quick map; for full code walkthroughs of each sketch, read the
+**[Examples Guide](EXAMPLES.md)**.
 
-**Graphics on the framebuffer**
-- 🔤 **[TextScroll example](../examples/TextScroll/text_scroll.ino)** — scrolling marquee text with a 3×5 pixel font.
-- 🖼️ **[IconViewer example](../examples/IconViewer/icon_viewer.ino)** — cycling gallery of ASCII-art color icons.
-- 🦠 **[GameOfLife example](../examples/GameOfLife/game_of_life.ino)** — Conway's Game of Life with a wrap-around world.
-- 🌈 **[SpatialSine example](../examples/SpatialSine/SpatialSine.ino)** — animated rainbow wave.
-- 🔥 **[FirePalette example](../examples/FirePalette/fire_palette.ino)** — rising flame from a heat field + color palette.
-- 🏓 **[Pong example](../examples/Pong/pong.ino)** — self-playing Pong with sub-pixel ball physics.
+**🟢 Level 1 — Basics (the brightness pipeline)**
+- 🔴 **[Basic](../examples/Basic/Basic.ino)** — the buffer → `show()` cycle: a pixel that travels the panel. Start here.
+- 🌈 **[ColorWheel](../examples/ColorWheel/color_wheel.ino)** — full-panel rainbow generated on the fly with an integer HSV→RGB conversion.
+- 💡 **[BrightnessFade](../examples/BrightnessFade/brightness_fade.ino)** — fades the panel using only `setGlobalCurrent()`, isolating the master-current stage.
+- ⚖️ **[WhiteBalance](../examples/WhiteBalance/white_balance.ino)** — trim R/G/B over Serial with `setScaling()` to calibrate a neutral white.
 
-**Hardware features & reference**
-- 🌬️ **[breathing example](../examples/breathing/breathing.ino)** — hardware breathing effects.
+**🟡 Level 2 — Graphics on the framebuffer**
+- 🔤 **[TextScroll](../examples/TextScroll/text_scroll.ino)** — scrolling marquee text from a built-in 3×5 pixel font.
+- 🖼️ **[IconViewer](../examples/IconViewer/icon_viewer.ino)** — static bitmaps stored as editable ASCII-art, cycled on a timer.
+- 🦠 **[GameOfLife](../examples/GameOfLife/game_of_life.ino)** — a RAM simulation drawn with double buffering and a wrap-around grid.
+- 🌈 **[SpatialSine](../examples/SpatialSine/SpatialSine.ino)** — color from a sine table with per-channel phase offsets.
+- 🔥 **[FirePalette](../examples/FirePalette/fire_palette.ino)** — a "heat" field mapped to color through a fire palette.
+- 🏓 **[Pong](../examples/Pong/pong.ino)** — self-playing Pong with sub-pixel ball physics and collisions.
+
+**🔴 Level 3 — Hardware features & integration**
+- 🌬️ **[breathing](../examples/breathing/breathing.ino)** — the chip's autonomous breathing engines (PAT0–PAT2), zero MCU load.
+- 🫧 **[MixedBreathing](../examples/MixedBreathing/mixed_breathing.ino)** — hardware breathing and direct PWM coexisting via `setChannelPattern()`.
+- 📷 **[PwmFrequencySweep](../examples/PWMFrequencySweep/pwm_frequency_sweep.ino)** — `setPwmFrequency()` and its effect on camera flicker.
+- 🩺 **[RegisterDump](../examples/RegisterDump/register_dump.ino)** — Serial diagnostics with `readRegister()`/`writeRegister()`.
+- 🧩 **[MultiPanel](../examples/MultiPanel/multi_panel.ino)** — two chips on one SPI bus as a single wide canvas.
+- 📊 **[VuMeter](../examples/VuMeter/vu_meter.ino)** — a VU meter driven by live external input (Serial or analog).
+
+**Reference**
+- 🎓 **[Examples Guide](EXAMPLES.md)** — all of the above explained with code.
 - 📖 **[Manual / API Reference](MANUAL.md)** — every function explained in detail.
 
 ---
