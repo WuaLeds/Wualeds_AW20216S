@@ -5,7 +5,7 @@
 [![Framework](https://img.shields.io/badge/framework-Arduino-00979D)](https://www.arduino.cc/)
 [![Bus](https://img.shields.io/badge/bus-SPI-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
-[![Version](https://img.shields.io/badge/version-0.2.3-orange)]()
+[![Version](https://img.shields.io/badge/version-0.2.5-orange)]()
 
 > Driver for **LMX2** — a **6 × 12 RGB LED matrix** (216 LEDs) built around the **Awinic AW20216S** constant-current LED controller, driven over SPI from any Arduino-compatible MCU.
 
